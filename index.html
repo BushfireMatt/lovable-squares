@@ -352,6 +352,7 @@
       <button class="tab" data-tab="usage" onclick="showTab('usage')">📋 Wool usage log</button>
       <button class="tab" data-tab="projects" onclick="showTab('projects')">🗳️ Rug projects<span class="tab-badge" id="projBadge">0</span></button>
       <button class="tab" data-tab="committee" onclick="showTab('committee')">🏛️ Committee</button>
+      <button class="tab" data-tab="rugdesign" onclick="showTab('rugdesign')">🎨 Rug designer</button>
       <button class="tab" data-tab="members" id="tab-members-btn" style="display:none" onclick="showTab('members')">👥 Members</button>
     </div>
 
@@ -519,6 +520,15 @@
       <div class="msg" id="elecErr"></div>
 
       <div id="elecList"></div>
+    </div>
+
+    <!-- RUG DESIGNER (all members) -->
+    <div class="panel" id="panel-rugdesign">
+      <div class="panel-head">
+        <div><h2>Rug designer</h2><p>Plan a rug on a grid — paint squares with colours or photos of real crochet squares, then export a picture to share. Your design and any squares you add are saved in this browser.</p></div>
+      </div>
+      <iframe src="rug-designer.html" title="Rug designer" loading="lazy"
+        style="width:100%;height:82vh;min-height:520px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
     </div>
 
     <!-- MEMBERS (administrator only) -->
