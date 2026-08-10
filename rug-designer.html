@@ -511,6 +511,34 @@
     border-radius: 50%; background: #3f8f5b; color: #fff;
     font-size: 2rem; line-height: 60px; text-align: center;
   }
+
+  /* my-squares manager */
+  .mgr-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .mgr-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px;
+  }
+  .mgr-thumb {
+    width: 56px; height: 56px; object-fit: cover;
+    border-radius: 7px; border: 2px solid var(--ink); flex: 0 0 auto;
+  }
+  .mgr-name { flex: 1; font-weight: 600; font-size: 0.92rem; word-break: break-word; }
+  .mgr-actions { display: flex; gap: 6px; flex: 0 0 auto; flex-wrap: wrap; }
+  .btn-mini { padding: 6px 10px; font-size: 0.8rem; }
+  .btn-mini.danger { border-color: #c0603f; color: #b0492b; }
+  :root[data-theme="dark"] .btn-mini.danger { color: #e79079; border-color: #7a4433; }
+
+  /* toast */
+  .rug-toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px);
+    background: var(--ink); color: var(--paper);
+    padding: 12px 18px; border-radius: 10px; font-size: 0.9rem;
+    max-width: 88vw; text-align: center; box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1100;
+  }
+  .rug-toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .rug-toast { transition: opacity 0.25s ease; } }
 </style>
 
 <div class="wrap">
@@ -556,6 +584,11 @@
         <button class="btn upload-btn" id="uploadTile">
           <span aria-hidden="true">＋</span> Add a photo of your square
         </button>
+        <button class="btn upload-btn" id="importTile">
+          <span aria-hidden="true">📥</span> Load a square someone sent
+        </button>
+        <input type="file" id="importFile" accept="image/*" hidden>
+        <button class="btn" id="shareSquares" style="display:none">Share my squares…</button>
       </div>
 
       <div class="field-group">
@@ -680,6 +713,7 @@
             customTiles.splice(i, 1); saveCustom(); rebuildTileMaps();
             if (current === token) setCurrent(ERASER);
             renderSwatches();
+            if (typeof updateShareBtn === "function") updateShareBtn();
           }
         });
         b.appendChild(x);
@@ -1018,7 +1052,8 @@
           '<p class="save-note">It goes straight into your palette below and stays saved on this device, ready next time you open the app.</p>' +
           '<div class="wiz-actions">' +
             '<button class="btn primary" id="wizSave">Add to my palette</button>' +
-            '<button class="btn" id="wizDownload">Save a copy to my device</button>' +
+            '<button class="btn" id="wizCopy">Copy image</button>' +
+            '<button class="btn" id="wizDownload">Save a copy</button>' +
           '</div>' +
         '</section>' +
 
@@ -1026,7 +1061,12 @@
           '<div class="done-tick">✓</div>' +
           '<h2 style="text-align:center">All done!</h2>' +
           '<p class="wiz-lead" style="text-align:center">Find <b id="wizDoneName">your new tile</b> in the palette. Tap it, then paint the grid.</p>' +
+          '<p class="save-note" style="text-align:center">Want other members to have it too? Copy or save the image and send it to them by email or message — they add it with “Load a square someone sent”.</p>' +
           '<div class="wiz-actions">' +
+            '<button class="btn" id="wizDoneCopy">Copy image to share</button>' +
+            '<button class="btn" id="wizDoneSave">Save a copy</button>' +
+          '</div>' +
+          '<div class="wiz-actions" style="margin-top:10px">' +
             '<button class="btn primary" id="wizAddAnother">Add another square</button>' +
             '<button class="btn" id="wizFinish">Finish</button>' +
           '</div>' +
@@ -1044,7 +1084,10 @@
     q("wizApplyManual").addEventListener("click", applyManual);
     q("wizBackPreview").addEventListener("click", function () { toStep(3); });
     q("wizSave").addEventListener("click", saveTile);
+    q("wizCopy").addEventListener("click", function () { copyImage(wiz.result); });
     q("wizDownload").addEventListener("click", downloadTile);
+    q("wizDoneCopy").addEventListener("click", function () { copyImage(wiz.result); });
+    q("wizDoneSave").addEventListener("click", downloadTile);
     q("wizAddAnother").addEventListener("click", resetToStart);
     q("wizFinish").addEventListener("click", closeWizard);
     setupManualDrag();
@@ -1291,32 +1334,177 @@
   }
 
   function saveTile() {
-    var name = (q("wizName").value || "").trim() || "My tile " + (customTiles.length + 1);
+    var name = (q("wizName").value || "").trim();
+    var tile = addCustomTile(wiz.result, name);
+    q("wizDoneName").textContent = tile.label;
+    toStep(6);
+  }
+  function downloadTile() {
+    if (!wiz.result) return;
+    downloadImage(wiz.result, (q("wizName").value || "").trim() || "my-square");
+  }
+
+  // ---- add / share / import custom tiles ----
+  function addCustomTile(dataURL, name) {
     var id = "u" + Date.now().toString(36) + Math.floor(performance.now()).toString(36);
-    var tile = { id: id, label: name, src: wiz.result };
+    var tile = { id: id, label: name || ("My tile " + (customTiles.length + 1)), src: dataURL };
     customTiles.push(tile);
     saveCustom();
     rebuildTileMaps();
     renderSwatches();
     setCurrent("tile:" + id);
-    q("wizDoneName").textContent = name;
-    toStep(6);
+    updateShareBtn();
+    return tile;
   }
-  function downloadTile() {
-    if (!wiz.result) return;
+  function updateShareBtn() {
+    var b = document.getElementById("shareSquares");
+    if (b) b.style.display = customTiles.length ? "block" : "none";
+  }
+  function slug(s) { return (s || "crochet-square").replace(/[^\w-]+/g, "-").toLowerCase() || "crochet-square"; }
+  function downloadImage(dataURL, name) {
     var a = document.createElement("a");
-    a.href = wiz.result;
-    var nm = (q("wizName").value || "my-square").trim().replace(/[^\w-]+/g, "-").toLowerCase() || "my-square";
-    a.download = nm + ".jpg";
+    a.href = dataURL; a.download = slug(name) + ".jpg";
     a.click();
   }
+  function dataURLtoPNGBlob(dataURL) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        var cv = document.createElement("canvas");
+        cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+        cv.getContext("2d").drawImage(img, 0, 0);
+        cv.toBlob(function (b) { res(b); }, "image/png");
+      };
+      img.src = dataURL;
+    });
+  }
+  function copyImage(dataURL) {
+    if (!dataURL) return;
+    if (navigator.clipboard && window.ClipboardItem) {
+      dataURLtoPNGBlob(dataURL).then(function (blob) {
+        navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })])
+          .then(function () { toast("Copied! Paste it into an email or message to share."); },
+                function () { downloadImage(dataURL); toast("Couldn’t copy here — saved a copy to your device instead."); });
+      });
+    } else {
+      downloadImage(dataURL);
+      toast("Saved a copy to your device — attach it to an email or message.");
+    }
+  }
+  function toast(msg) {
+    var t = document.createElement("div");
+    t.className = "rug-toast"; t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add("show"); });
+    setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.remove(); }, 300); }, 2800);
+  }
+  function coverToSquare(bmp, size) {
+    var cv = document.createElement("canvas"); cv.width = size; cv.height = size;
+    var iw = bmp.naturalWidth || bmp.width, ih = bmp.naturalHeight || bmp.height;
+    var s = Math.min(iw, ih), sx = (iw - s) / 2, sy = (ih - s) / 2;
+    cv.getContext("2d").drawImage(bmp, sx, sy, s, s, 0, 0, size, size);
+    return cv.toDataURL("image/jpeg", 0.85);
+  }
+
+  // Import a square someone sent — already trimmed, so no crop: jump to the save step
+  function openWizardAtSave(dataURL) {
+    if (!wiz.root) wiz.root = buildWizard();
+    wiz.root.style.display = "flex";
+    wiz.bitmap = null; wiz.box = null; wiz.result = dataURL;
+    q("wizThumb").src = dataURL;
+    q("wizName").value = "";
+    toStep(5);
+  }
+  document.getElementById("importTile").addEventListener("click", function () {
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    loadBitmap(f).then(function (bmp) { openWizardAtSave(coverToSquare(bmp, 300)); })
+      .catch(function () { alert("Sorry, we couldn’t open that image. Please try another."); });
+    e.target.value = "";
+  });
+
+  // ---- "My squares" manager (re-share any time) ----
+  var mgr = { root: null };
+  function q2(id) { return mgr.root.querySelector("#" + id); }
+  function buildManager() {
+    var m = document.createElement("div");
+    m.className = "wiz-overlay";
+    m.innerHTML =
+      '<div class="wiz" role="dialog" aria-modal="true" aria-label="My squares">' +
+        '<button class="wiz-close" id="mgrClose" title="Close">×</button>' +
+        '<h2>My squares</h2>' +
+        '<p class="wiz-lead">Copy or save any square, then send it to another member. They add it with “Load a square someone sent”.</p>' +
+        '<div class="mgr-list" id="mgrList"></div>' +
+        '<div class="wiz-actions"><button class="btn" id="mgrDone">Close</button></div>' +
+      '</div>';
+    document.body.appendChild(m);
+    mgr.root = m;
+    m.addEventListener("click", function (e) { if (e.target === m) closeManager(); });
+    q2("mgrClose").addEventListener("click", closeManager);
+    q2("mgrDone").addEventListener("click", closeManager);
+    return m;
+  }
+  function closeManager() { if (mgr.root) mgr.root.style.display = "none"; }
+  function openManager() {
+    if (!mgr.root) mgr.root = buildManager();
+    renderManagerList();
+    mgr.root.style.display = "flex";
+  }
+  function escapeHtml(s) {
+    return (s + "").replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function renderManagerList() {
+    var list = q2("mgrList");
+    list.innerHTML = "";
+    if (!customTiles.length) {
+      list.innerHTML = '<p class="save-note">You haven’t added any squares yet.</p>';
+      return;
+    }
+    customTiles.forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "mgr-row";
+      row.innerHTML = '<img class="mgr-thumb" src="' + t.src + '" alt=""><span class="mgr-name">' + escapeHtml(t.label) + '</span>';
+      var actions = document.createElement("div");
+      actions.className = "mgr-actions";
+      actions.appendChild(mgrBtn("Copy", function () { copyImage(t.src); }));
+      actions.appendChild(mgrBtn("Save", function () { downloadImage(t.src, t.label); }));
+      var del = mgrBtn("Delete", function () {
+        if (!confirm("Remove “" + t.label + "” from your palette?")) return;
+        var i = customTiles.indexOf(t);
+        if (i > -1) {
+          customTiles.splice(i, 1); saveCustom(); rebuildTileMaps();
+          if (current === "tile:" + t.id) setCurrent(ERASER);
+          renderSwatches(); updateShareBtn(); renderManagerList();
+        }
+      });
+      del.classList.add("danger");
+      actions.appendChild(del);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+  }
+  function mgrBtn(label, fn) {
+    var b = document.createElement("button");
+    b.className = "btn btn-mini"; b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  document.getElementById("shareSquares").addEventListener("click", openManager);
 
   document.getElementById("uploadTile").addEventListener("click", openWizard);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && wiz.root && wiz.root.style.display !== "none") closeWizard();
+    if (e.key !== "Escape") return;
+    if (wiz.root && wiz.root.style.display !== "none") closeWizard();
+    if (mgr.root && mgr.root.style.display !== "none") closeManager();
   });
 
   // ---- init ----
+  updateShareBtn();
   renderSwatches();
   setCurrent(PRESETS[0]);
   buildGrid();
