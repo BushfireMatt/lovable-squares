@@ -1280,9 +1280,11 @@
     return bmpW(wiz.bitmap) / img.clientWidth; // natural per display px
   }
   function positionRect() {
-    var s = dispScale(), b = wiz.box, rect = q("wizRect");
-    rect.style.left = (b.x / s) + "px";
-    rect.style.top = (b.y / s) + "px";
+    var img = q("wizFull"), s = dispScale(), b = wiz.box, rect = q("wizRect");
+    // offset by the image's own position within the stage (portrait photos are centred)
+    var ox = img.offsetLeft, oy = img.offsetTop;
+    rect.style.left = (ox + b.x / s) + "px";
+    rect.style.top = (oy + b.y / s) + "px";
     rect.style.width = (b.w / s) + "px";
     rect.style.height = (b.h / s) + "px";
   }
