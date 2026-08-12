@@ -607,9 +607,9 @@ const store = {
 function seed(){
   if(!store.get("members", null)){
     store.set("members", [
-      {id:id(), name:"Felicity", user:"felicity", pass:"demo321", role:"administrator"},
-      {id:id(), name:"June",     user:"june",     pass:"rugs321", role:"treasurer"},
-      {id:id(), name:"Dorothy",  user:"dorothy",  pass:"rugs321", role:"member"}
+      {id:id(), name:"Felicity", user:"felicity", pass:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470", role:"administrator"},
+      {id:id(), name:"June",     user:"june",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"treasurer"},
+      {id:id(), name:"Dorothy",  user:"dorothy",  pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"member"}
     ]);
   }
   if(!store.get("projects", null)){
@@ -693,7 +693,7 @@ function migrateAdmin(){
   const old = mem.find(m=>m.user==='margaret');
   const fel = mem.find(m=>m.user==='felicity');
   if(old && !fel){
-    old.name='Felicity'; old.user='felicity'; old.pass='demo321'; old.role='administrator';
+    old.name='Felicity'; old.user='felicity'; old.pass='288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470'; old.role='administrator';
     store.set("members", mem);
     const projs = store.get("projects", []);
     let changed=false;
@@ -717,11 +717,18 @@ function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 /* ---------- Login / logout ---------- */
 function openLogin(){ document.getElementById('loginOverlay').classList.add('show'); document.getElementById('loginUser').focus(); }
 function closeLogin(){ document.getElementById('loginOverlay').classList.remove('show'); document.getElementById('loginErr').classList.remove('err'); }
-function doLogin(){
+async function hashPass(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function doLogin(){
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
-  const match = store.get("members",[]).find(x=>x.user.toLowerCase()===u && x.pass===p);
   const err = document.getElementById('loginErr');
+  let h = null;
+  try { h = await hashPass(p); } catch(e) { h = null; }
+  // match against the stored hash, or plaintext for any legacy account already saved on this device
+  const match = store.get("members",[]).find(x=>x.user.toLowerCase()===u && (x.pass===h || x.pass===p));
   if(!match){ err.textContent="Sorry, that username or password wasn't recognised."; err.classList.add('err'); return; }
   sessionStorage.setItem("cr_user", JSON.stringify({id:match.id}));
   enterMembers();
@@ -1012,7 +1019,7 @@ function renderUsage(){
 }
 
 /* ---------- Members / accounts (administrator only) ---------- */
-function addMember(){
+async function addMember(){
   if(!isAdmin()) return;
   const name=document.getElementById('mName').value.trim();
   const user=document.getElementById('mUser').value.trim().toLowerCase();
@@ -1022,7 +1029,9 @@ function addMember(){
   if(!name||!user||!pass){ err.textContent="Please enter a full name, username and password."; err.classList.add('err'); return; }
   const list=store.get("members",[]);
   if(list.some(m=>m.user.toLowerCase()===user)){ err.textContent="That username is already taken."; err.classList.add('err'); return; }
-  list.push({id:id(),name,user,pass,role});
+  let hpass = pass;
+  try { hpass = await hashPass(pass); } catch(e) {}
+  list.push({id:id(),name,user,pass:hpass,role});
   store.set("members",list);
   document.getElementById('mName').value=''; document.getElementById('mUser').value=''; document.getElementById('mPass').value='';
   toggleForm('memForm'); renderMembers(); renderCommittee();
@@ -1038,14 +1047,16 @@ function changeRole(mid,role){
   m.role=role; store.set("members",list);
   renderMembers(); updateChrome(); renderFinances(); renderCommittee();   // in case you changed your own role
 }
-function resetPass(mid){
+async function resetPass(mid){
   if(!isAdmin()) return;
   const list=store.get("members",[]);
   const m=list.find(x=>x.id===mid); if(!m) return;
-  const np=prompt("Set a new password for "+m.name+":", m.pass);
+  const np=prompt("Set a new password for "+m.name+":");
   if(np===null) return;
   if(!np.trim()){ alert("Password can't be empty."); return; }
-  m.pass=np; store.set("members",list); renderMembers();
+  let hpass = np.trim();
+  try { hpass = await hashPass(np.trim()); } catch(e) {}
+  m.pass=hpass; store.set("members",list); renderMembers();
 }
 function delMember(mid){
   if(!isAdmin()) return;
@@ -1074,7 +1085,7 @@ function renderMembers(){
       <td>${esc(m.name)}${m.owner?' <span class="pill low">Owner</span>':''}${isSelf?' <span class="pill in">you</span>':''}</td>
       <td>${esc(m.user)}</td>
       <td>${roleCell}</td>
-      <td><code>${esc(m.pass)}</code> <button class="btn btn-ghost btn-sm" onclick="resetPass('${m.id}')">Change</button></td>
+      <td><span style="color:var(--muted);letter-spacing:2px">••••••</span> <button class="btn btn-ghost btn-sm" onclick="resetPass('${m.id}')">Set / change</button></td>
       <td>${actionCell}</td>
     </tr>`;
   }).join('');
