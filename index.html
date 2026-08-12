@@ -582,10 +582,6 @@
     <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="username" autocomplete="off"></div>
     <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="password"></div>
     <button class="btn btn-wine" style="width:100%" onclick="doLogin()">Log in</button>
-    <p class="hint">Demo logins:<br>
-      <strong>felicity</strong> / <strong>demo123</strong> — Administrator<br>
-      <strong>june</strong> / <strong>rugs123</strong> — Treasurer<br>
-      <strong>dorothy</strong> / <strong>rugs123</strong> — Member</p>
   </div>
 </div>
 
@@ -611,9 +607,9 @@ const store = {
 function seed(){
   if(!store.get("members", null)){
     store.set("members", [
-      {id:id(), name:"Felicity", user:"felicity", pass:"demo123", role:"administrator"},
-      {id:id(), name:"June",     user:"june",     pass:"rugs123", role:"treasurer"},
-      {id:id(), name:"Dorothy",  user:"dorothy",  pass:"rugs123", role:"member"}
+      {id:id(), name:"Felicity", user:"felicity", pass:"demo321", role:"administrator"},
+      {id:id(), name:"June",     user:"june",     pass:"rugs321", role:"treasurer"},
+      {id:id(), name:"Dorothy",  user:"dorothy",  pass:"rugs321", role:"member"}
     ]);
   }
   if(!store.get("projects", null)){
@@ -697,7 +693,7 @@ function migrateAdmin(){
   const old = mem.find(m=>m.user==='margaret');
   const fel = mem.find(m=>m.user==='felicity');
   if(old && !fel){
-    old.name='Felicity'; old.user='felicity'; old.pass='demo123'; old.role='administrator';
+    old.name='Felicity'; old.user='felicity'; old.pass='demo321'; old.role='administrator';
     store.set("members", mem);
     const projs = store.get("projects", []);
     let changed=false;
