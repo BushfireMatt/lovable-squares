@@ -710,6 +710,27 @@ function ensureOwner(){
   o.owner=true; o.role='administrator';
   store.set("members", mem);
 }
+// One-time upgrade of already-saved browsers: move the default demo accounts
+// from their old plaintext passwords to the new hashed passwords (felicity: demo321,
+// june/dorothy: rugs321). Leaves any already-hashed or admin-set account untouched.
+function migratePasswords(){
+  if(store.get("pwVersion",0) >= 2) return;
+  const mem = store.get("members", null);
+  if(mem){
+    const defaults = {
+      felicity:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470",
+      june:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672",
+      dorothy:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"
+    };
+    let changed=false;
+    mem.forEach(m=>{
+      const isHash = /^[0-9a-f]{64}$/.test(m.pass||'');
+      if(!isHash && defaults[m.user]){ m.pass = defaults[m.user]; changed=true; }
+    });
+    if(changed) store.set("members", mem);
+  }
+  store.set("pwVersion", 2);
+}
 function id(){ return Math.random().toString(36).slice(2,10); }
 function money(n){ return "$"+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1394,6 +1415,7 @@ function renderAll(){ renderFinances(); renderWool(); fillWoolSelect(); renderUs
 /* ---------- init ---------- */
 seed();
 migrateAdmin();
+migratePasswords();
 ensureOwner();
 // default dates to today
 const today=new Date().toISOString().slice(0,10);
