@@ -324,6 +324,22 @@
   }
   .tile-swatch:hover .tile-del,
   .tile-del:focus { opacity: 1; }
+  .tile-edit {
+    position: absolute;
+    top: -6px; left: -6px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    line-height: 15px;
+    text-align: center;
+    border: 2px solid var(--surface);
+    opacity: 0;
+    cursor: pointer;
+  }
+  .tile-swatch:hover .tile-edit,
+  .tile-edit:focus { opacity: 1; }
 
   /* ---- upload wizard ---- */
   .wiz-overlay {
@@ -801,6 +817,21 @@
           }
         });
         b.appendChild(x);
+        var ed = document.createElement("span");
+        ed.className = "tile-edit";
+        ed.textContent = "✎";
+        ed.title = "Rename this square";
+        ed.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          var nn = prompt("Name for this square:", t.label);
+          if (nn === null) return;
+          nn = nn.trim().slice(0, 24);
+          if (!nn) return;
+          t.label = nn;
+          saveCustom(); rebuildTileMaps(); renderSwatches();
+          if (current === token) setCurrent(token);
+        });
+        b.appendChild(ed);
       }
       swatchesEl.appendChild(b);
     });

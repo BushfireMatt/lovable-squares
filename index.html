@@ -249,6 +249,8 @@
   .done-meta{font-size:.92rem;color:var(--muted);margin:4px 0 14px}
   .done-sec{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
   .done-sec h4{margin:0 0 8px;font-size:.82rem;color:var(--wine);letter-spacing:.05em;text-transform:uppercase}
+  .done-facts{list-style:none;padding:0;margin:0;font-size:.92rem}
+  .done-facts li{margin-bottom:5px}
   .done-rug table{box-shadow:none;border:1px solid var(--line)}
   .done-rug th,.done-rug td{padding:8px 11px;font-size:.88rem}
   @media(max-width:820px){
@@ -1459,6 +1461,12 @@ const COMPLETED_RUGS = [
     recipient:"Margaret W.", presented:"2026-05-14",
     story:"Presented at Blue Haven aged care, where Margaret is a resident.",
     contributors:["Felicity","June","Dorothy"],
+    layout:{cols:4, rows:5, squareMm:200, borderMm:100},
+    pattern:{name:"Granny flower square", rows:6},
+    squares:[
+      {name:"Cherry", count:4}, {name:"Flame", count:4}, {name:"Marigold", count:4},
+      {name:"Honey", count:4}, {name:"Burgundy", count:4}
+    ],
     yarn:[
       {brand:"Bendigo Woollen Mills", colour:"Cherry", thickness:"8-ply", balls:4},
       {brand:"Bendigo Woollen Mills", colour:"Marigold", thickness:"8-ply", balls:4},
@@ -1471,6 +1479,12 @@ const COMPLETED_RUGS = [
     recipient:"Ken B.", presented:"2026-06-28",
     story:"Made for Ken during his cancer treatment, in his favourite greens.",
     contributors:["June","Dorothy"],
+    layout:{cols:5, rows:6, squareMm:200, borderMm:100},
+    pattern:{name:"Granny flower square", rows:6},
+    squares:[
+      {name:"Teal", count:6}, {name:"Plum", count:6}, {name:"Fern", count:6},
+      {name:"Lime", count:6}, {name:"Magenta", count:6}
+    ],
     yarn:[
       {brand:"Spotlight 4 Seasons", colour:"Teal", thickness:"8-ply", balls:5},
       {brand:"Spotlight 4 Seasons", colour:"Fern green", thickness:"8-ply", balls:4},
@@ -1484,6 +1498,13 @@ const COMPLETED_RUGS = [
     recipient:"Paediatric ward, Base Hospital", presented:"2026-07-19",
     story:"A bright rug for the children's ward waiting room.",
     contributors:["Felicity","June","Dorothy"],
+    layout:{cols:4, rows:6, squareMm:200, borderMm:100},
+    pattern:{name:"Granny flower square", rows:6},
+    squares:[
+      {name:"Cherry", count:4}, {name:"Marigold", count:4}, {name:"Plum", count:4},
+      {name:"Honey", count:3}, {name:"Magenta", count:3}, {name:"Lime", count:2},
+      {name:"Flame", count:2}, {name:"Teal", count:1}, {name:"Burgundy", count:1}
+    ],
     yarn:[
       {brand:"Mixed donated yarn", colour:"Assorted brights", thickness:"8-ply", balls:12},
       {brand:"Lincraft Cosy Wool", colour:"Cream (joining)", thickness:"8-ply", balls:5},
@@ -1502,6 +1523,21 @@ function renderPublicGallery(){
     `<figure><img src="${esc(r.img)}" alt="A completed hand-crocheted rug" loading="lazy"></figure>`
   ).join('');
 }
+function rugFactsHTML(r){
+  const facts = [];
+  if(r.layout){
+    const L = r.layout, b = L.borderMm||0;
+    const w = L.cols*L.squareMm + 2*b, h = L.rows*L.squareMm + 2*b;
+    const m = mm => (mm/1000).toFixed(2).replace(/\.?0+$/,'') + " m";
+    facts.push(`<li><b>Finished size:</b> ${m(w)} × ${m(h)}${b ? ` (incl. ${b} mm border)` : ''}</li>`);
+    facts.push(`<li><b>Squares:</b> ${L.cols*L.rows} in total (${L.cols} × ${L.rows}) · ${L.squareMm} mm each</li>`);
+  }
+  if(r.pattern){
+    facts.push(`<li><b>Pattern:</b> ${esc(r.pattern.name)}${r.pattern.rows ? ` · ${esc(r.pattern.rows)} rows` : ''}</li>`);
+  }
+  if(!facts.length) return '';
+  return `<div class="done-sec"><h4>Rug details</h4><ul class="done-facts">${facts.join('')}</ul></div>`;
+}
 function renderDoneRugs(){
   const el = document.getElementById('doneRugList');
   if(!el) return;
@@ -1513,6 +1549,12 @@ function renderDoneRugs(){
         <h3>${esc(r.title)}</h3>
         <div class="done-meta">Presented to <strong>${esc(r.recipient)}</strong> · ${fmtDate(r.presented)}</div>
         ${r.story ? `<p style="margin:0">${esc(r.story)}</p>` : ''}
+        ${rugFactsHTML(r)}
+        ${r.squares && r.squares.length ? `
+        <div class="done-sec">
+          <h4>Squares used</h4>
+          <div class="chips">${r.squares.map(s=>`<span class="chip"><b>${esc(s.count)}</b>&nbsp;× ${esc(s.name)}</span>`).join('')}</div>
+        </div>` : ''}
         <div class="done-sec">
           <h4>Made by</h4>
           <div class="chips">${r.contributors.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>
