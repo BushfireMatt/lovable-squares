@@ -648,6 +648,7 @@ const store = {
 function seed(){
   if(!store.get("members", null)){
     store.set("members", [
+      {id:id(), name:"Rosslyn",  user:"rosslyn",  pass:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830", role:"administrator", owner:true},
       {id:id(), name:"Felicity", user:"felicity", pass:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470", role:"administrator"},
       {id:id(), name:"June",     user:"june",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"treasurer"},
       {id:id(), name:"Dorothy",  user:"dorothy",  pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"member"}
@@ -747,17 +748,18 @@ function ensureOwner(){
   const mem = store.get("members", null);
   if(!mem || !mem.length) return;
   if(mem.some(m=>m.owner)) return;
-  const o = mem.find(m=>m.user==='felicity') || mem.find(m=>m.role==='administrator') || mem[0];
+  const o = mem.find(m=>m.user==='rosslyn') || mem.find(m=>m.user==='felicity') || mem.find(m=>m.role==='administrator') || mem[0];
   o.owner=true; o.role='administrator';
   store.set("members", mem);
 }
-// One-time repair of already-saved browsers (v3): restore the three demo accounts
-// to their documented passwords (felicity: demo321, june/dorothy: rugs321), fixing
-// any stale plaintext or outdated hash left over from earlier versions, and
-// re-adding a demo account if it was removed. Other accounts are untouched.
+// One-time repair of already-saved browsers (v4): restore the demo accounts to their
+// documented passwords (rosslyn: owner321, felicity: demo321, june/dorothy: rugs321),
+// re-add any that were removed, and make Rosslyn the group owner (Felicity stays a
+// plain administrator). Other accounts are untouched.
 function migratePasswords(){
-  if(store.get("pwVersion",0) >= 3) return;
+  if(store.get("pwVersion",0) >= 4) return;
   const defaults = {
+    rosslyn: {name:"Rosslyn",  role:"administrator", hash:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830"},
     felicity:{name:"Felicity", role:"administrator", hash:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470"},
     june:    {name:"June",     role:"treasurer",     hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"},
     dorothy: {name:"Dorothy",  role:"member",        hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"}
@@ -775,9 +777,13 @@ function migratePasswords(){
         changed=true;
       }
     });
+    // ownership moves to Rosslyn
+    mem.forEach(m=>{ if(m.owner && m.user!=='rosslyn'){ delete m.owner; changed=true; } });
+    const ross = mem.find(m=>m.user==='rosslyn');
+    if(ross && !ross.owner){ ross.owner=true; ross.role='administrator'; changed=true; }
     if(changed) store.set("members", mem);
   }
-  store.set("pwVersion", 3);
+  store.set("pwVersion", 4);
 }
 function id(){ return Math.random().toString(36).slice(2,10); }
 function money(n){ return "$"+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
