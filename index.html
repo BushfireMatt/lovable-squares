@@ -237,6 +237,25 @@
   .form-grid .field{margin:0}
   .table-wrap{overflow-x:auto}
 
+  /* ---------- Completed rugs ---------- */
+  .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .gallery figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:14px;box-shadow:var(--shadow)}
+  .gallery img{width:100%;height:auto;display:block;border-radius:8px}
+  .done-rug{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+    padding:22px;margin-bottom:22px;display:grid;grid-template-columns:300px 1fr;gap:24px}
+  .done-rug img{width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+  .done-rug h3{margin:0;color:var(--wine-dark)}
+  .done-meta{font-size:.92rem;color:var(--muted);margin:4px 0 14px}
+  .done-sec{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .done-sec h4{margin:0 0 8px;font-size:.82rem;color:var(--wine);letter-spacing:.05em;text-transform:uppercase}
+  .done-rug table{box-shadow:none;border:1px solid var(--line)}
+  .done-rug th,.done-rug td{padding:8px 11px;font-size:.88rem}
+  @media(max-width:820px){
+    .gallery{grid-template-columns:1fr 1fr}
+    .done-rug{grid-template-columns:1fr}
+  }
+
   @media(max-width:820px){
     .hero .wrap,.cards,.steps,.stat-row,.stat-4{grid-template-columns:1fr}
     .steps{gap:26px}
@@ -256,6 +275,7 @@
         <a href="#about">About</a>
         <a href="#what">What we do</a>
         <a href="#how">How it works</a>
+        <a href="#gallery">Our rugs</a>
         <a href="#help">Get a rug</a>
       </nav>
       <button class="btn btn-gold" onclick="openLogin()">Member login</button>
@@ -309,6 +329,15 @@
     </div>
   </section>
 
+  <section id="gallery">
+    <div class="wrap">
+      <div class="section-title"><h2>Completed rugs</h2>
+        <p>Some of the rugs our members have made and given. Every one is unique —
+          designed, crocheted and joined by hand.</p></div>
+      <div class="gallery" id="publicGallery"></div>
+    </div>
+  </section>
+
   <section id="help">
     <div class="wrap">
       <p class="quote">“The rug arrived the week Mum went into palliative care.
@@ -353,6 +382,7 @@
       <button class="tab" data-tab="projects" onclick="showTab('projects')">🗳️ Rug projects<span class="tab-badge" id="projBadge">0</span></button>
       <button class="tab" data-tab="committee" onclick="showTab('committee')">🏛️ Committee</button>
       <button class="tab" data-tab="rugdesign" onclick="showTab('rugdesign')">🎨 Rug designer</button>
+      <button class="tab" data-tab="donerugs" onclick="showTab('donerugs')">🧵 Completed rugs</button>
       <button class="tab" data-tab="members" id="tab-members-btn" style="display:none" onclick="showTab('members')">👥 Members</button>
     </div>
 
@@ -529,6 +559,15 @@
       </div>
       <iframe src="rug-designer.html" title="Rug designer" loading="lazy"
         style="width:100%;height:82vh;min-height:520px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
+    </div>
+
+    <!-- COMPLETED RUGS (all members) -->
+    <div class="panel" id="panel-donerugs">
+      <div class="panel-head">
+        <div><h2>Completed rugs</h2><p>The full story of each finished rug — who it went to,
+          who made it, and the yarn that went into it. The public site shows the photos only.</p></div>
+      </div>
+      <div id="doneRugList"></div>
     </div>
 
     <!-- MEMBERS (administrator only) -->
@@ -1403,7 +1442,87 @@ function renderElections(){
   }).join('');
 }
 
-function renderAll(){ renderFinances(); renderWool(); fillWoolSelect(); renderUsage(); renderProjects(); renderCommittee(); renderMembers(); }
+/* ---------- Completed rugs ----------
+   This list lives in the site code (not browser storage) so every visitor sees the
+   same gallery. To add a rug: add its photo to images/rugs/ and an entry below.
+   The public gallery shows photos only; details appear in the members area. */
+const COMPLETED_RUGS = [
+  {
+    img:"images/rugs/rug-1.jpg", title:"Autumn Blooms",
+    recipient:"Margaret W.", presented:"2026-05-14",
+    story:"Presented at Blue Haven aged care, where Margaret is a resident.",
+    contributors:["Felicity","June","Dorothy"],
+    yarn:[
+      {brand:"Bendigo Woollen Mills", colour:"Cherry", thickness:"8-ply", balls:4},
+      {brand:"Bendigo Woollen Mills", colour:"Marigold", thickness:"8-ply", balls:4},
+      {brand:"Lincraft Cosy Wool", colour:"Burgundy", thickness:"8-ply", balls:3},
+      {brand:"Lincraft Cosy Wool", colour:"Cream (joining & border)", thickness:"8-ply", balls:5}
+    ]
+  },
+  {
+    img:"images/rugs/rug-2.jpg", title:"Spring Garden",
+    recipient:"Ken B.", presented:"2026-06-28",
+    story:"Made for Ken during his cancer treatment, in his favourite greens.",
+    contributors:["June","Dorothy"],
+    yarn:[
+      {brand:"Spotlight 4 Seasons", colour:"Teal", thickness:"8-ply", balls:5},
+      {brand:"Spotlight 4 Seasons", colour:"Fern green", thickness:"8-ply", balls:4},
+      {brand:"Bendigo Woollen Mills", colour:"Plum", thickness:"8-ply", balls:3},
+      {brand:"Bendigo Woollen Mills", colour:"Cream (joining)", thickness:"8-ply", balls:4},
+      {brand:"Bendigo Woollen Mills", colour:"Sage (border)", thickness:"8-ply", balls:3}
+    ]
+  },
+  {
+    img:"images/rugs/rug-3.jpg", title:"Rainbow Cheer",
+    recipient:"Paediatric ward, Base Hospital", presented:"2026-07-19",
+    story:"A bright rug for the children's ward waiting room.",
+    contributors:["Felicity","June","Dorothy"],
+    yarn:[
+      {brand:"Mixed donated yarn", colour:"Assorted brights", thickness:"8-ply", balls:12},
+      {brand:"Lincraft Cosy Wool", colour:"Cream (joining)", thickness:"8-ply", balls:5},
+      {brand:"Lincraft Cosy Wool", colour:"Gold (border)", thickness:"8-ply", balls:4}
+    ]
+  }
+];
+function fmtDate(iso){
+  try{ return new Date(iso+"T00:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long",year:"numeric"}); }
+  catch(e){ return iso; }
+}
+function renderPublicGallery(){
+  const g = document.getElementById('publicGallery');
+  if(!g) return;
+  g.innerHTML = COMPLETED_RUGS.map(r=>
+    `<figure><img src="${esc(r.img)}" alt="A completed hand-crocheted rug" loading="lazy"></figure>`
+  ).join('');
+}
+function renderDoneRugs(){
+  const el = document.getElementById('doneRugList');
+  if(!el) return;
+  if(!COMPLETED_RUGS.length){ el.innerHTML = '<div class="empty">No completed rugs recorded yet.</div>'; return; }
+  el.innerHTML = COMPLETED_RUGS.map(r=>`
+    <div class="done-rug">
+      <div><img src="${esc(r.img)}" alt="${esc(r.title)}" loading="lazy"></div>
+      <div>
+        <h3>${esc(r.title)}</h3>
+        <div class="done-meta">Presented to <strong>${esc(r.recipient)}</strong> · ${fmtDate(r.presented)}</div>
+        ${r.story ? `<p style="margin:0">${esc(r.story)}</p>` : ''}
+        <div class="done-sec">
+          <h4>Made by</h4>
+          <div class="chips">${r.contributors.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>
+        </div>
+        <div class="done-sec">
+          <h4>Yarn used</h4>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Brand</th><th>Colour</th><th>Thickness</th><th class="num">Balls</th></tr></thead>
+            <tbody>${r.yarn.map(y=>`<tr><td>${esc(y.brand)}</td><td>${esc(y.colour)}</td><td>${esc(y.thickness)}</td><td class="num">${esc(y.balls)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr><td colspan="3">Total balls</td><td class="num">${r.yarn.reduce((s,y)=>s+(Number(y.balls)||0),0)}</td></tr></tfoot>
+          </table></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAll(){ renderFinances(); renderWool(); fillWoolSelect(); renderUsage(); renderProjects(); renderCommittee(); renderMembers(); renderDoneRugs(); }
 
 /* ---------- decorative hero rug ---------- */
 (function(){
@@ -1413,6 +1532,7 @@ function renderAll(){ renderFinances(); renderWool(); fillWoolSelect(); renderUs
 })();
 
 /* ---------- init ---------- */
+renderPublicGallery();
 seed();
 migrateAdmin();
 migratePasswords();
