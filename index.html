@@ -1462,10 +1462,12 @@ const COMPLETED_RUGS = [
     story:"Presented at Blue Haven aged care, where Margaret is a resident.",
     contributors:["Felicity","June","Dorothy"],
     layout:{cols:4, rows:5, squareMm:200, borderMm:100},
-    pattern:{name:"Granny flower square", rows:6},
     squares:[
-      {name:"Cherry", count:4}, {name:"Flame", count:4}, {name:"Marigold", count:4},
-      {name:"Honey", count:4}, {name:"Burgundy", count:4}
+      {name:"Cherry",   count:4, pattern:"Granny flower square", rows:6, colours:"Cherry red flower, yellow centre, cream frame"},
+      {name:"Flame",    count:4, pattern:"Granny flower square", rows:6, colours:"Flame orange flower, yellow centre, cream frame"},
+      {name:"Marigold", count:4, pattern:"Sunburst square",      rows:5, colours:"Marigold petals, gold centre, cream frame"},
+      {name:"Honey",    count:4, pattern:"Sunburst square",      rows:5, colours:"Honey gold petals, yellow centre, cream frame"},
+      {name:"Burgundy", count:4, pattern:"Granny flower square", rows:6, colours:"Burgundy flower, yellow centre, cream frame"}
     ],
     yarn:[
       {brand:"Bendigo Woollen Mills", colour:"Cherry", thickness:"8-ply", balls:4},
@@ -1480,10 +1482,12 @@ const COMPLETED_RUGS = [
     story:"Made for Ken during his cancer treatment, in his favourite greens.",
     contributors:["June","Dorothy"],
     layout:{cols:5, rows:6, squareMm:200, borderMm:100},
-    pattern:{name:"Granny flower square", rows:6},
     squares:[
-      {name:"Teal", count:6}, {name:"Plum", count:6}, {name:"Fern", count:6},
-      {name:"Lime", count:6}, {name:"Magenta", count:6}
+      {name:"Teal",    count:6, pattern:"Granny flower square", rows:6, colours:"Teal flower, yellow centre, cream frame"},
+      {name:"Plum",    count:6, pattern:"Granny flower square", rows:6, colours:"Deep plum flower, yellow centre, cream frame"},
+      {name:"Fern",    count:6, pattern:"Leafy lace square",    rows:7, colours:"Fern green leaves on cream"},
+      {name:"Lime",    count:6, pattern:"Leafy lace square",    rows:7, colours:"Lime green leaves on cream"},
+      {name:"Magenta", count:6, pattern:"Granny flower square", rows:6, colours:"Magenta flower, yellow centre, cream frame"}
     ],
     yarn:[
       {brand:"Spotlight 4 Seasons", colour:"Teal", thickness:"8-ply", balls:5},
@@ -1499,11 +1503,16 @@ const COMPLETED_RUGS = [
     story:"A bright rug for the children's ward waiting room.",
     contributors:["Felicity","June","Dorothy"],
     layout:{cols:4, rows:6, squareMm:200, borderMm:100},
-    pattern:{name:"Granny flower square", rows:6},
     squares:[
-      {name:"Cherry", count:4}, {name:"Marigold", count:4}, {name:"Plum", count:4},
-      {name:"Honey", count:3}, {name:"Magenta", count:3}, {name:"Lime", count:2},
-      {name:"Flame", count:2}, {name:"Teal", count:1}, {name:"Burgundy", count:1}
+      {name:"Cherry",   count:4, pattern:"Granny flower square", rows:6, colours:"Cherry red flower on cream"},
+      {name:"Marigold", count:4, pattern:"Sunburst square",      rows:5, colours:"Marigold petals on cream"},
+      {name:"Plum",     count:4, pattern:"Granny flower square", rows:6, colours:"Plum flower on cream"},
+      {name:"Honey",    count:3, pattern:"Sunburst square",      rows:5, colours:"Honey gold petals on cream"},
+      {name:"Magenta",  count:3, pattern:"Granny flower square", rows:6, colours:"Magenta flower on cream"},
+      {name:"Lime",     count:2, pattern:"Leafy lace square",    rows:7, colours:"Lime green leaves on cream"},
+      {name:"Flame",    count:2, pattern:"Granny flower square", rows:6, colours:"Flame orange flower on cream"},
+      {name:"Teal",     count:1, pattern:"Granny flower square", rows:6, colours:"Teal flower on cream"},
+      {name:"Burgundy", count:1, pattern:"Granny flower square", rows:6, colours:"Burgundy flower on cream"}
     ],
     yarn:[
       {brand:"Mixed donated yarn", colour:"Assorted brights", thickness:"8-ply", balls:12},
@@ -1532,9 +1541,6 @@ function rugFactsHTML(r){
     facts.push(`<li><b>Finished size:</b> ${m(w)} × ${m(h)}${b ? ` (incl. ${b} mm border)` : ''}</li>`);
     facts.push(`<li><b>Squares:</b> ${L.cols*L.rows} in total (${L.cols} × ${L.rows}) · ${L.squareMm} mm each</li>`);
   }
-  if(r.pattern){
-    facts.push(`<li><b>Pattern:</b> ${esc(r.pattern.name)}${r.pattern.rows ? ` · ${esc(r.pattern.rows)} rows` : ''}</li>`);
-  }
   if(!facts.length) return '';
   return `<div class="done-sec"><h4>Rug details</h4><ul class="done-facts">${facts.join('')}</ul></div>`;
 }
@@ -1553,7 +1559,11 @@ function renderDoneRugs(){
         ${r.squares && r.squares.length ? `
         <div class="done-sec">
           <h4>Squares used</h4>
-          <div class="chips">${r.squares.map(s=>`<span class="chip"><b>${esc(s.count)}</b>&nbsp;× ${esc(s.name)}</span>`).join('')}</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Square</th><th>Pattern</th><th class="num">Rows</th><th>Colours</th><th class="num">How many</th></tr></thead>
+            <tbody>${r.squares.map(s=>`<tr><td><strong>${esc(s.name)}</strong></td><td>${esc(s.pattern||'—')}</td><td class="num">${s.rows?esc(s.rows):'—'}</td><td>${esc(s.colours||'—')}</td><td class="num">${esc(s.count)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr><td colspan="4">Total squares</td><td class="num">${r.squares.reduce((t,s)=>t+(Number(s.count)||0),0)}</td></tr></tfoot>
+          </table></div>
         </div>` : ''}
         <div class="done-sec">
           <h4>Made by</h4>
