@@ -589,6 +589,37 @@
   }
   .border-swatch:hover { transform: scale(1.05); }
   .border-swatch.selected { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+  .drop-hint {
+    margin: 12px 0 0;
+    padding: 14px;
+    border: 2px dashed var(--line-strong);
+    border-radius: 12px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+  .drop-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(20, 16, 10, 0.55);
+    z-index: 2000;
+    pointer-events: none;
+  }
+  .drop-overlay.on { display: flex; }
+  .drop-overlay div {
+    padding: 36px 28px;
+    max-width: 420px;
+    border: 3px dashed #fff;
+    border-radius: 18px;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: center;
+  }
 </style>
 
 <div class="wrap">
@@ -634,6 +665,7 @@
         <button class="btn upload-btn" id="uploadTile">
           <span aria-hidden="true">＋</span> Add a photo of your square
         </button>
+        <p class="hint" style="margin:-2px 0 4px;font-size:0.82rem;color:var(--ink-soft)">Tip: you can also drag a photo onto this page, or paste one with Ctrl + V.</p>
         <button class="btn upload-btn" id="importTile">
           <span aria-hidden="true">📥</span> Load a square someone sent
         </button>
@@ -1243,6 +1275,7 @@
           '</ul>' +
           '<label class="big-btn" for="wizFile">📸 Take or choose a photo</label>' +
           '<input type="file" accept="image/*" capture="environment" hidden id="wizFile">' +
+          '<p class="drop-hint">…or <b>drag a photo</b> from your email onto this page,<br>or <b>copy</b> the photo and press <b>Ctrl + V</b> to paste it.</p>' +
         '</section>' +
 
         '<section class="wiz-step" data-step="2" hidden>' +
@@ -1349,7 +1382,9 @@
 
   function onFile(e) {
     var file = e.target.files && e.target.files[0];
-    if (!file) return;
+    if (file) processPhoto(file);
+  }
+  function processPhoto(file) {
     toStep(2);
     loadBitmap(file).then(function (bmp) {
       wiz.bitmap = bmp;
@@ -1660,6 +1695,56 @@
     loadBitmap(f).then(function (bmp) { openWizardAtSave(coverToSquare(bmp, 300)); })
       .catch(function () { alert("Sorry, we couldn’t open that image. Please try another."); });
     e.target.value = "";
+  });
+
+  // ---- drag a photo onto the page, or paste one (Ctrl+V) ----
+  // Both go straight into the "cut out your square" wizard, so members can
+  // drag a photo out of an email without hunting through folders.
+  function startWithPhoto(file) {
+    openWizard();
+    processPhoto(file);
+  }
+  function imageFrom(items) {
+    for (var i = 0; i < (items || []).length; i++) {
+      var it = items[i];
+      var f = it.getAsFile ? (it.kind === "file" ? it.getAsFile() : null) : it;
+      if (f && /^image\//.test(f.type)) return f;
+    }
+    return null;
+  }
+  var dropOverlay = document.createElement("div");
+  dropOverlay.className = "drop-overlay";
+  dropOverlay.innerHTML = "<div>Drop your photo here 📸</div>";
+  document.body.appendChild(dropOverlay);
+  var dragDepth = 0;
+  function isFileDrag(e) {
+    var t = e.dataTransfer && e.dataTransfer.types;
+    return !!t && Array.prototype.indexOf.call(t, "Files") !== -1;
+  }
+  document.addEventListener("dragenter", function (e) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault(); dragDepth++; dropOverlay.classList.add("on");
+  });
+  document.addEventListener("dragover", function (e) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy";
+  });
+  document.addEventListener("dragleave", function (e) {
+    if (!isFileDrag(e)) return;
+    if (--dragDepth <= 0) { dragDepth = 0; dropOverlay.classList.remove("on"); }
+  });
+  document.addEventListener("drop", function (e) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault(); dragDepth = 0; dropOverlay.classList.remove("on");
+    var f = imageFrom(e.dataTransfer.files);
+    if (f) startWithPhoto(f);
+    else alert("That doesn’t look like a photo. Please drop a picture file (JPG or PNG).");
+  });
+  document.addEventListener("paste", function (e) {
+    var f = imageFrom(e.clipboardData && e.clipboardData.items);
+    if (!f) return; // ordinary text paste (e.g. into the name box) carries on as normal
+    e.preventDefault();
+    startWithPhoto(f);
   });
 
   // ---- "My squares" manager (re-share any time) ----

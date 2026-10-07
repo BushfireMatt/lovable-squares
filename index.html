@@ -1611,6 +1611,14 @@ document.getElementById('mtgDate').value=today;
 if(sessionStorage.getItem("cr_user")){ enterMembers(); }
 // allow Enter to submit login
 document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+// A photo dropped beside the rug designer would otherwise make the browser
+// leave the site to show the picture.
+["dragover","drop"].forEach(function(ev){
+  document.addEventListener(ev,function(e){
+    var t=e.dataTransfer&&e.dataTransfer.types;
+    if(t&&Array.prototype.indexOf.call(t,"Files")!==-1) e.preventDefault();
+  });
+});
 </script>
 </body>
 </html>
