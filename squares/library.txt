@@ -1,0 +1,9 @@
+# Lovable Squares - shared square library
+#
+# One square per line, written as:   Name = file name
+# The file must be uploaded into this same "squares" folder.
+# Lines starting with # are notes and are ignored.
+#
+# Example:
+#   Blue Daisy = blue-daisy.jpg
+
