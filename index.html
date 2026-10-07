@@ -651,13 +651,13 @@ function seed(){
       {id:id(), name:"Rosslyn",  user:"rosslyn",  pass:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830", role:"administrator", owner:true},
       {id:id(), name:"Felicity", user:"felicity", pass:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470", role:"administrator"},
       {id:id(), name:"June",     user:"june",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"treasurer"},
-      {id:id(), name:"Dorothy",  user:"dorothy",  pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"member"}
+      {id:id(), name:"Kezza",    user:"kezza",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"member"}
     ]);
   }
   if(!store.get("projects", null)){
     const mem = store.get("members",[]);
     const byUser = u => (mem.find(m=>m.user===u) || {});
-    const fel=byUser("felicity"), june=byUser("june"), dot=byUser("dorothy");
+    const fel=byUser("felicity"), june=byUser("june"), dot=byUser("kezza");
     store.set("projects", [
       {
         id:id(), title:"Rug for Mrs Aldridge", forWhom:"Mrs Aldridge — palliative care, Blue Haven",
@@ -752,21 +752,34 @@ function ensureOwner(){
   o.owner=true; o.role='administrator';
   store.set("members", mem);
 }
-// One-time repair of already-saved browsers (v4): restore the demo accounts to their
-// documented passwords (rosslyn: owner321, felicity: demo321, june/dorothy: rugs321),
+// One-time repair of already-saved browsers (v5): restore the demo accounts to their
+// documented passwords (rosslyn: owner321, felicity: demo321, june/kezza: rugs321),
 // re-add any that were removed, and make Rosslyn the group owner (Felicity stays a
-// plain administrator). Other accounts are untouched.
+// plain administrator). v5 also renames Dorothy to Kezza. Other accounts are untouched.
 function migratePasswords(){
-  if(store.get("pwVersion",0) >= 4) return;
+  if(store.get("pwVersion",0) >= 5) return;
   const defaults = {
     rosslyn: {name:"Rosslyn",  role:"administrator", hash:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830"},
     felicity:{name:"Felicity", role:"administrator", hash:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470"},
     june:    {name:"June",     role:"treasurer",     hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"},
-    dorothy: {name:"Dorothy",  role:"member",        hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"}
+    kezza:   {name:"Kezza",    role:"member",        hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"}
   };
   const mem = store.get("members", null);
   if(mem){
     let changed=false;
+    // Dorothy -> Kezza: keep the same member id so votes, teams and messages follow
+    const dot = mem.find(x=>x.user==="dorothy");
+    if(dot && !mem.some(x=>x.user==="kezza")){
+      dot.user="kezza"; dot.name="Kezza"; changed=true;
+      const projects = store.get("projects", null);
+      if(projects){
+        projects.forEach(p=>{
+          if(p.proposerId===dot.id) p.proposerName="Kezza";
+          (p.messages||[]).forEach(m=>{ if(m.memberId===dot.id) m.name="Kezza"; });
+        });
+        store.set("projects", projects);
+      }
+    }
     Object.keys(defaults).forEach(user=>{
       const d = defaults[user];
       const m = mem.find(x=>x.user===user);
@@ -783,7 +796,7 @@ function migratePasswords(){
     if(ross && !ross.owner){ ross.owner=true; ross.role='administrator'; changed=true; }
     if(changed) store.set("members", mem);
   }
-  store.set("pwVersion", 4);
+  store.set("pwVersion", 5);
 }
 function id(){ return Math.random().toString(36).slice(2,10); }
 function money(n){ return "$"+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -1466,7 +1479,7 @@ const COMPLETED_RUGS = [
     img:"images/rugs/rug-1.jpg", title:"Autumn Blooms",
     recipient:"Margaret W.", presented:"2026-05-14",
     story:"Presented at Blue Haven aged care, where Margaret is a resident.",
-    contributors:["Felicity","June","Dorothy"],
+    contributors:["Felicity","June","Kezza"],
     layout:{cols:4, rows:5, squareMm:200, borderMm:100},
     squares:[
       {name:"Cherry",   count:4, pattern:"Granny flower square", rows:6, colours:"Cherry red flower, yellow centre, cream frame"},
@@ -1486,7 +1499,7 @@ const COMPLETED_RUGS = [
     img:"images/rugs/rug-2.jpg", title:"Spring Garden",
     recipient:"Ken B.", presented:"2026-06-28",
     story:"Made for Ken during his cancer treatment, in his favourite greens.",
-    contributors:["June","Dorothy"],
+    contributors:["June","Kezza"],
     layout:{cols:5, rows:6, squareMm:200, borderMm:100},
     squares:[
       {name:"Teal",    count:6, pattern:"Granny flower square", rows:6, colours:"Teal flower, yellow centre, cream frame"},
@@ -1507,7 +1520,7 @@ const COMPLETED_RUGS = [
     img:"images/rugs/rug-3.jpg", title:"Rainbow Cheer",
     recipient:"Paediatric ward, Base Hospital", presented:"2026-07-19",
     story:"A bright rug for the children's ward waiting room.",
-    contributors:["Felicity","June","Dorothy"],
+    contributors:["Felicity","June","Kezza"],
     layout:{cols:4, rows:6, squareMm:200, borderMm:100},
     squares:[
       {name:"Cherry",   count:4, pattern:"Granny flower square", rows:6, colours:"Cherry red flower on cream"},
