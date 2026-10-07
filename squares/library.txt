@@ -7,3 +7,6 @@
 # Example:
 #   Blue Daisy = blue-daisy.jpg
 
+Silver Lace = silver-lace.jpg
+Mint Swirl = mint-swirl.jpg
+Plum Blossom = plum-blossom.jpg
