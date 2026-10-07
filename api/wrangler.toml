@@ -1,0 +1,13 @@
+name = "lovable-squares-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lovable-squares"
+# Filled in by `npx wrangler d1 create lovable-squares` on the group's Cloudflare account
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[vars]
+# Pages allowed to call this API (comma separated)
+ALLOWED_ORIGINS = "https://bushfirematt.github.io,http://localhost:8901"

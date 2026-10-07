@@ -609,7 +609,7 @@
   </div>
 
   <footer style="margin-top:40px">
-    <div class="wrap"><p style="opacity:.7;font-size:.85rem">Lovable Squares members area · demo prototype · data is saved in this browser only</p></div>
+    <div class="wrap"><p style="opacity:.7;font-size:.85rem">Lovable Squares members area · demo prototype · logins and squares are shared; other records are saved in this browser</p></div>
   </footer>
 </div>
 
@@ -622,13 +622,17 @@
     <div class="msg" id="loginErr"></div>
     <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="username" autocomplete="off"></div>
     <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="password"></div>
-    <button class="btn btn-wine" style="width:100%" onclick="doLogin()">Log in</button>
+    <button class="btn btn-wine" style="width:100%" id="loginBtn" onclick="doLogin()">Log in</button>
   </div>
 </div>
 
+<script src="api-config.js"></script>
 <script>
 /* ============================================================
-   Lovable Squares — prototype data layer (browser localStorage)
+   Lovable Squares — data layer
+   Logins and members live on the shared server (api/), so they work on every
+   device. Finances, wool, projects and committee records are still saved in
+   this browser (localStorage) for now.
    ============================================================ */
 const ROLE_LABELS = { administrator:"Administrator", treasurer:"Treasurer", member:"Member" };
 const POSITIONS = ["Administrator","Treasurer","Project Coordinator","Stock Controller"];
@@ -648,10 +652,10 @@ const store = {
 function seed(){
   if(!store.get("members", null)){
     store.set("members", [
-      {id:id(), name:"Rosslyn",  user:"rosslyn",  pass:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830", role:"administrator", owner:true},
-      {id:id(), name:"Felicity", user:"felicity", pass:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470", role:"administrator"},
-      {id:id(), name:"June",     user:"june",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"treasurer"},
-      {id:id(), name:"Kezza",    user:"kezza",     pass:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672", role:"member"}
+      {id:"m-rosslyn",  name:"Rosslyn",  user:"rosslyn",  role:"administrator", owner:true},
+      {id:"m-felicity", name:"Felicity", user:"felicity", role:"administrator"},
+      {id:"m-june",     name:"June",     user:"june",     role:"treasurer"},
+      {id:"m-kezza",    name:"Kezza",    user:"kezza",    role:"member"}
     ]);
   }
   if(!store.get("projects", null)){
@@ -727,77 +731,6 @@ function seed(){
     store.set("seeded", true);
   }
 }
-// One-time upgrade: if a browser still has the original demo admin (margaret),
-// convert that account into Felicity without disturbing any real members added since.
-function migrateAdmin(){
-  const mem = store.get("members", null);
-  if(!mem) return;
-  const old = mem.find(m=>m.user==='margaret');
-  const fel = mem.find(m=>m.user==='felicity');
-  if(old && !fel){
-    old.name='Felicity'; old.user='felicity'; old.pass='288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470'; old.role='administrator';
-    store.set("members", mem);
-    const projs = store.get("projects", []);
-    let changed=false;
-    projs.forEach(p=>{ if(p.proposerId===old.id && p.proposerName==='Margaret'){ p.proposerName='Felicity'; changed=true; } });
-    if(changed) store.set("projects", projs);
-  }
-}
-// Ensure the group has an owner (permanent administrator). Runs after migrateAdmin.
-function ensureOwner(){
-  const mem = store.get("members", null);
-  if(!mem || !mem.length) return;
-  if(mem.some(m=>m.owner)) return;
-  const o = mem.find(m=>m.user==='rosslyn') || mem.find(m=>m.user==='felicity') || mem.find(m=>m.role==='administrator') || mem[0];
-  o.owner=true; o.role='administrator';
-  store.set("members", mem);
-}
-// One-time repair of already-saved browsers (v5): restore the demo accounts to their
-// documented passwords (rosslyn: owner321, felicity: demo321, june/kezza: rugs321),
-// re-add any that were removed, and make Rosslyn the group owner (Felicity stays a
-// plain administrator). v5 also renames Dorothy to Kezza. Other accounts are untouched.
-function migratePasswords(){
-  if(store.get("pwVersion",0) >= 5) return;
-  const defaults = {
-    rosslyn: {name:"Rosslyn",  role:"administrator", hash:"474c9e3abf4a2a93abd2ab9015ca8c7b3cd6483ae331b48ae8db14379b2c2830"},
-    felicity:{name:"Felicity", role:"administrator", hash:"288a6f803a5f968ed8db32a7fc62ab42aba3fb1b8860fef4e779ecbfd7608470"},
-    june:    {name:"June",     role:"treasurer",     hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"},
-    kezza:   {name:"Kezza",    role:"member",        hash:"cb1b1cb9ae183e57f0db43a69b8f36620d0cc292990897078ac6de59eaa9d672"}
-  };
-  const mem = store.get("members", null);
-  if(mem){
-    let changed=false;
-    // Dorothy -> Kezza: keep the same member id so votes, teams and messages follow
-    const dot = mem.find(x=>x.user==="dorothy");
-    if(dot && !mem.some(x=>x.user==="kezza")){
-      dot.user="kezza"; dot.name="Kezza"; changed=true;
-      const projects = store.get("projects", null);
-      if(projects){
-        projects.forEach(p=>{
-          if(p.proposerId===dot.id) p.proposerName="Kezza";
-          (p.messages||[]).forEach(m=>{ if(m.memberId===dot.id) m.name="Kezza"; });
-        });
-        store.set("projects", projects);
-      }
-    }
-    Object.keys(defaults).forEach(user=>{
-      const d = defaults[user];
-      const m = mem.find(x=>x.user===user);
-      if(m){
-        if(m.pass!==d.hash){ m.pass=d.hash; changed=true; }
-      }else{
-        mem.push({id:id(), name:d.name, user:user, pass:d.hash, role:d.role});
-        changed=true;
-      }
-    });
-    // ownership moves to Rosslyn
-    mem.forEach(m=>{ if(m.owner && m.user!=='rosslyn'){ delete m.owner; changed=true; } });
-    const ross = mem.find(m=>m.user==='rosslyn');
-    if(ross && !ross.owner){ ross.owner=true; ross.role='administrator'; changed=true; }
-    if(changed) store.set("members", mem);
-  }
-  store.set("pwVersion", 5);
-}
 function id(){ return Math.random().toString(36).slice(2,10); }
 function money(n){ return "$"+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -809,25 +742,75 @@ async function hashPass(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+function authToken(){ try{ return localStorage.getItem("cr_token")||""; }catch(e){ return ""; } }
+async function api(path, opts={}){
+  const headers={"Content-Type":"application/json"};
+  const t=authToken(); if(t) headers.Authorization="Bearer "+t;
+  let res;
+  try{ res=await fetch(window.LS_API+path,{method:opts.method||"GET",headers,body:opts.body?JSON.stringify(opts.body):undefined}); }
+  catch(e){ throw new Error("Can't reach the Lovable Squares server. Check your internet connection and try again."); }
+  const data=await res.json().catch(()=>({}));
+  if(res.status===401 && path!=="/api/login"){ signedOut(); }
+  if(!res.ok) throw new Error(data.error||"Something went wrong.");
+  return data;
+}
+// Members come from the server. Records saved in this browser before the switch
+// used random member ids, so point them at the server's ids (matched by username).
+function syncMembers(list){
+  const local=store.get("members",[]);
+  const remap={};
+  list.forEach(m=>{ const l=local.find(x=>String(x.user).toLowerCase()===m.user.toLowerCase()); if(l && l.id!==m.id) remap[l.id]=m.id; });
+  if(Object.keys(remap).length){
+    ["projects","offices","elections","reads"].forEach(k=>{
+      let raw=localStorage.getItem("cr_"+k); if(!raw) return;
+      Object.entries(remap).forEach(([a,b])=>{ raw=raw.split('"'+a+'"').join('"'+b+'"'); });
+      localStorage.setItem("cr_"+k, raw);
+    });
+  }
+  store.set("members", list);
+}
+async function refreshMembers(){ const d=await api("/api/members"); syncMembers(d.members); }
+function reloadDesigner(){
+  const f=document.querySelector('#panel-rugdesign iframe');
+  if(f){ try{ f.contentWindow.location.reload(); }catch(e){ f.src=f.src; } }
+}
 async function doLogin(){
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
   const err = document.getElementById('loginErr');
-  let h = null;
-  try { h = await hashPass(p); } catch(e) { h = null; }
-  // match against the stored hash, or plaintext for any legacy account already saved on this device
-  const match = store.get("members",[]).find(x=>x.user.toLowerCase()===u && (x.pass===h || x.pass===p));
-  if(!match){ err.textContent="Sorry, that username or password wasn't recognised."; err.classList.add('err'); return; }
-  sessionStorage.setItem("cr_user", JSON.stringify({id:match.id}));
-  enterMembers();
+  err.classList.remove('err');
+  if(!u||!p){ err.textContent="Please enter your username and password."; err.classList.add('err'); return; }
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true; btn.textContent="Logging in…";
+  try{
+    const d=await api("/api/login",{method:"POST",body:{user:u,hash:await hashPass(p)}});
+    localStorage.setItem("cr_token", d.token);
+    localStorage.setItem("cr_me", d.me.id);
+    await refreshMembers();
+    document.getElementById('loginPass').value='';
+    enterMembers();
+    reloadDesigner();
+  }catch(e){ err.textContent=e.message; err.classList.add('err'); }
+  finally{ btn.disabled=false; btn.textContent="Log in"; }
 }
-function logout(){ sessionStorage.removeItem("cr_user"); document.getElementById('members').style.display='none'; document.getElementById('public').style.display='block'; window.scrollTo(0,0); }
+function showPublic(){ document.getElementById('members').style.display='none'; document.getElementById('public').style.display='block'; window.scrollTo(0,0); }
+function clearSession(){ try{ localStorage.removeItem("cr_token"); localStorage.removeItem("cr_me"); }catch(e){} }
+function logout(){
+  if(authToken()) api("/api/logout",{method:"POST"}).catch(()=>{});
+  clearSession(); showPublic(); reloadDesigner();
+}
+// The server no longer recognises this login (expired, or password changed)
+function signedOut(){
+  const wasIn=!!authToken();
+  clearSession(); showPublic(); reloadDesigner();
+  if(wasIn){ openLogin(); const err=document.getElementById('loginErr'); err.textContent="Please log in again."; err.classList.add('err'); }
+}
 
 // Resolve the signed-in member live from the store (so role/name changes take effect immediately)
 function currentUser(){
-  let s; try{ s=JSON.parse(sessionStorage.getItem("cr_user")); }catch(e){ return null; }
-  if(!s) return null;
-  return store.get("members",[]).find(x=>x.id===s.id) || null;
+  let mid; try{ mid=localStorage.getItem("cr_me"); }catch(e){ return null; }
+  if(!mid || !authToken()) return null;
+  return store.get("members",[]).find(x=>x.id===mid) || null;
 }
 function canEditFinances(){ const me=currentUser(); return !!me && (me.role==='administrator'||me.role==='treasurer'); }
 function isAdmin(){ const me=currentUser(); return !!me && me.role==='administrator'; }
@@ -1115,24 +1098,17 @@ async function addMember(){
   const role=document.getElementById('mRole').value;
   const err=document.getElementById('memErr'); err.classList.remove('err');
   if(!name||!user||!pass){ err.textContent="Please enter a full name, username and password."; err.classList.add('err'); return; }
-  const list=store.get("members",[]);
-  if(list.some(m=>m.user.toLowerCase()===user)){ err.textContent="That username is already taken."; err.classList.add('err'); return; }
-  let hpass = pass;
-  try { hpass = await hashPass(pass); } catch(e) {}
-  list.push({id:id(),name,user,pass:hpass,role});
-  store.set("members",list);
+  try{
+    await api("/api/members",{method:"POST",body:{name,user,hash:await hashPass(pass),role}});
+    await refreshMembers();
+  }catch(e){ err.textContent=e.message; err.classList.add('err'); return; }
   document.getElementById('mName').value=''; document.getElementById('mUser').value=''; document.getElementById('mPass').value='';
   toggleForm('memForm'); renderMembers(); renderCommittee();
 }
-function changeRole(mid,role){
+async function changeRole(mid,role){
   if(!isAdmin()) return;
-  const list=store.get("members",[]);
-  const m=list.find(x=>x.id===mid); if(!m) return;
-  if(m.owner){ alert("The group owner is always an administrator."); renderMembers(); return; }
-  if(m.role==='administrator' && role!=='administrator' && list.filter(x=>x.role==='administrator').length<=1){
-    alert("There must be at least one administrator."); renderMembers(); return;
-  }
-  m.role=role; store.set("members",list);
+  try{ await api("/api/members/"+mid,{method:"PATCH",body:{role}}); await refreshMembers(); }
+  catch(e){ alert(e.message); }
   renderMembers(); updateChrome(); renderFinances(); renderCommittee();   // in case you changed your own role
 }
 async function resetPass(mid){
@@ -1142,11 +1118,10 @@ async function resetPass(mid){
   const np=prompt("Set a new password for "+m.name+":");
   if(np===null) return;
   if(!np.trim()){ alert("Password can't be empty."); return; }
-  let hpass = np.trim();
-  try { hpass = await hashPass(np.trim()); } catch(e) {}
-  m.pass=hpass; store.set("members",list); renderMembers();
+  try{ await api("/api/members/"+mid,{method:"PATCH",body:{hash:await hashPass(np.trim())}}); alert("Password changed for "+m.name+"."); }
+  catch(e){ alert(e.message); }
 }
-function delMember(mid){
+async function delMember(mid){
   if(!isAdmin()) return;
   const list=store.get("members",[]);
   const m=list.find(x=>x.id===mid); if(!m) return;
@@ -1155,7 +1130,9 @@ function delMember(mid){
   if(me && mid===me.id){ alert("You can't delete your own account while you're signed in."); return; }
   if(m.role==='administrator' && list.filter(x=>x.role==='administrator').length<=1){ alert("There must be at least one administrator."); return; }
   if(!confirm("Delete "+m.name+"'s account? This can't be undone."))return;
-  store.set("members", list.filter(x=>x.id!==mid)); renderMembers(); renderCommittee();
+  try{ await api("/api/members/"+mid,{method:"DELETE"}); await refreshMembers(); }
+  catch(e){ alert(e.message); }
+  renderMembers(); renderCommittee();
 }
 function renderMembers(){
   const me=currentUser();
@@ -1417,13 +1394,14 @@ function delElection(eid){
 function assignOffice(pos, mid){
   if(!isAdmin()) return;
   const off=offices(); off[pos]=mid; store.set("offices",off);
-  const mem=store.get("members",[]); const m=mem.find(x=>x.id===mid);
-  if(m){
-    if(pos==='Administrator') m.role='administrator';
-    else if(pos==='Treasurer' && m.role==='member') m.role='treasurer';
-    store.set("members",mem);
+  const m=store.get("members",[]).find(x=>x.id===mid);
+  const role = !m ? null : pos==='Administrator' ? 'administrator' : (pos==='Treasurer' && m.role==='member') ? 'treasurer' : null;
+  const after=()=>{ renderCommittee(); renderMembers(); updateChrome(); renderWool(); renderProjects(); };
+  if(role && role!==m.role){
+    api("/api/members/"+mid,{method:"PATCH",body:{role}}).then(refreshMembers).catch(e=>alert(e.message)).then(after);
+    return;
   }
-  renderCommittee(); renderMembers(); updateChrome(); renderWool(); renderProjects();
+  after();
 }
 function setOfficeHolder(pos, val){
   if(!isAdmin() || val==='') return;
@@ -1612,16 +1590,16 @@ function renderAll(){ renderFinances(); renderWool(); fillWoolSelect(); renderUs
 /* ---------- init ---------- */
 renderPublicGallery();
 seed();
-migrateAdmin();
-migratePasswords();
-ensureOwner();
 // default dates to today
 const today=new Date().toISOString().slice(0,10);
 document.getElementById('finDate').value=today;
 document.getElementById('uDate').value=today;
 document.getElementById('mtgDate').value=today;
-// stay logged in within the tab session
-if(sessionStorage.getItem("cr_user")){ enterMembers(); }
+// stay logged in on this device; refresh members from the server in the background
+if(currentUser()){
+  enterMembers();
+  refreshMembers().then(()=>{ if(currentUser()){ updateChrome(); renderAll(); } else signedOut(); }).catch(()=>{});
+}
 // allow Enter to submit login
 document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 // A photo dropped beside the rug designer would otherwise make the browser
